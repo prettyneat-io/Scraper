@@ -7,7 +7,7 @@ const { fstat } = require("fs");
 const { isNumber } = require("util");
 
 
-
+// MAIN PAGE
 async function tScrape() {
 
      let outputArray = [];
@@ -86,6 +86,41 @@ function assignTendersToJson(cellNumber, obj, value, link){
 
     return obj;
 }
+async function generateHTMLFromMainJson(data,htmlArray) {
+    const openingHtml = `<!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>PrettyNeat| Tenders</title><link rel="stylesheet" href="css/mpstyle.css"> </head><body><div class = "header"><img src="logo.png"><div class = "innerheader"><div class="logocontainer"><h1>Pretty<span>Tenders</span></h1></div><ul class="navigation"><a><li>Home</li></a><a><li>About</li></a><a><li>Portfolio</li></a><a><li>Contact</li></a></ul></div></div></div><table id="ttable" class="center"> <thead> <tr> <th>#</th> <th>CfT Title</th><th>Page Link</th><th class="UniqueId">CfT UniqueID</th> <th class="ca">CA</th><th class="info">Info</th><th class="submission">Tender Submission Deadline</th> <th class="procedure">Procedure</th></tr></thead> <tbody> `;
+    const closingHtml = `</tbody></table></div></body><footer><div class="footer"><div class="innerfooter"><div class ="logocontainer">Need Help?</div></div></footer></html>`;
+    let newHtml = ``;
+    // console.log(data)
+    for(var i = 0; i < data.length; i++){
+        // console.log(i)
+        let id = data[i].Link.replace('/epps/cft/prepareViewCfTWS.do?resourceId=','');
+        newHtml += '<tr>';
+        newHtml += '<td class="id">'+ data[i].Id + '</td>';
+        newHtml += '<td class="title"><details><summary>'+data[i].Title+'</summary>'+'<br>'+'<ul class="dropdown">'+'<li>'+'Published by:'+''+htmlArray[i].PublishedBy+'</li>'+'<br>'+'<li>'+'Deadline:'+''+htmlArray[i].Deadline+'</li>'+'<br>'+'<li>'+'Date of Publication/Invitation:'+htmlArray[i].DateOfInvitation+'</li>'+'<br>'+'<li>'+'Procedure:'+''+htmlArray[i].Procedure+'</li>'+'</details>'+'</ul>'+'</td>';
+        newHtml += '<td class="link"><a target="_blank" href="/'+id+'.html">'+id+'</a></td>';
+        // newHtml += '<td><a target="_blank" href="https://www.etenders.gov.mt'+data[i].Link+'">Link</a></td>';
+        newHtml += '<td class="uniqueid">'+data[i].UniqueId+'</td>';
+        newHtml+= '<td class="authority">' +data[i].Authority+'</td>';
+        newHtml += '<td class="info">'+data[i].Info+'</td>';
+        newHtml += '<td class="deadline">'+data[i].Deadline+'</td>';
+        newHtml += '<td class="procedure">'+data[i].Procedure+'</td>';
+        newHtml += '</tr>';
+        // console.log(newHtml)
+        // console.log(i)
+    }
+    return `${openingHtml}${newHtml}${closingHtml}`
+
+}
+async function exportHTMLFromMainJson(input){
+    const fs = require("fs");
+    fs.writeFile('exportmain.html', input, function(err){
+        if (err){
+            return console.log(err);
+        }
+    })
+    // console.log(input)
+}  
+// LINKED PAGES
 async function generateJsonData(link) {
     try{
         const {data} = await axios.get(link);
@@ -257,112 +292,6 @@ function assignLinkDataToJson(cellNumber, obj, value){
     }
     return obj;
 }
-async function generateForEachContractData(data){
-    let contractId =   data.map(function(value, index){
-        return value.Link.replace('/epps/cft/prepareViewCfTWS.do?resourceId=', '');
-    })
-        let arrayOfContractAtLinks = new Array();
-
-        for(let i = 0; i < contractId.length; i++){
-            const fullLink = 'https://www.etenders.gov.mt/epps/cft/listContractDocuments.do?resourceId=' + contractId[i];
-            const jsonforContracts = await generateContractData(fullLink);
-            JSON.parse(arrayOfContractAtLinks.push(jsonforContracts));
-
-        }
-        return arrayOfContractAtLinks.sort();
-    
-}
-async function generateContractData(contract) {
-    try{
-        const {data} = await axios.get(contract);
-        const $ = cheerio.load(data);
-        let obj = {};
-        let objArray = [];
-        let isOffset = false;
-
-
-        $('td.extra').remove();
-        $("tbody > tr").each((rowIndex,row) => {  
-           var tds = $(row).find('td');
-            tds.each((tdindex, td) =>{
-                let remainder = getRemainder(tdindex, 5);
-                const value = $(td).text().trim();
-                obj = assignContractsToJson(remainder, obj, value);
-            })
-            objArray.push(obj);
-            obj = {};
-        }) 
-    
-        console.log(objArray)
-
-        
-        return objArray;   
- }
-        catch (error) {
-        throw error;
-        }
-  
-
-}; 
-function assignContractsToJson(cellNumber,obj,value){
-    switch(cellNumber){
-        case 0:{
-            obj.AddendumId = value.replace(/\s+/g, ' ').trim();;
-        }
-        case 1:{
-            obj.Title = value.replace(/\s+/g, ' ').trim();;
-        }
-        case 2:{
-            obj.File = value.replace(/\s+/g, ' ').trim();;
-        }
-        case 3:{
-            obj.Description = value.replace(/\s+/g, ' ').trim();;
-        }
-        case 4:{
-            obj.Language = value.replace(/\s+/g, ' ').trim();;
-        }
-    }
-    console.log(obj);
-    return obj
-    
-}
-function getRemainder(value, divisor){          
-    return value % divisor;
-} 
- async function generateHTMLFromMainJson(data,htmlArray) {
-    const openingHtml = `<!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>PrettyNeat| Tenders</title><link rel="stylesheet" href="css/mpstyle.css"> </head><body><div class = "header"><img src="logo.png"><div class = "innerheader"><div class="logocontainer"><h1>Pretty<span>Tenders</span></h1></div><ul class="navigation"><a><li>Home</li></a><a><li>About</li></a><a><li>Portfolio</li></a><a><li>Contact</li></a></ul></div></div></div><table id="ttable" class="center"> <thead> <tr> <th>#</th> <th>CfT Title</th><th>Page Link</th><th class="UniqueId">CfT UniqueID</th> <th class="ca">CA</th><th class="info">Info</th><th class="submission">Tender Submission Deadline</th> <th class="procedure">Procedure</th></tr></thead> <tbody> `;
-    const closingHtml = `</tbody></table></div></body><footer><div class="footer"><div class="innerfooter"><div class ="logocontainer">Need Help?</div></div></footer></html>`;
-    let newHtml = ``;
-    // console.log(data)
-    for(var i = 0; i < data.length; i++){
-        // console.log(i)
-        let id = data[i].Link.replace('/epps/cft/prepareViewCfTWS.do?resourceId=','');
-        newHtml += '<tr>';
-        newHtml += '<td class="id">'+ data[i].Id + '</td>';
-        newHtml += '<td class="title"><details><summary>'+data[i].Title+'</summary>'+'<br>'+'<ul class="dropdown">'+'<li>'+'Published by:'+''+htmlArray[i].PublishedBy+'</li>'+'<br>'+'<li>'+'Deadline:'+''+htmlArray[i].Deadline+'</li>'+'<br>'+'<li>'+'Date of Publication/Invitation:'+htmlArray[i].DateOfInvitation+'</li>'+'<br>'+'<li>'+'Procedure:'+''+htmlArray[i].Procedure+'</li>'+'</details>'+'</ul>'+'</td>';
-        newHtml += '<td class="link"><a target="_blank" href="/'+id+'.html">'+id+'</a></td>';
-        // newHtml += '<td><a target="_blank" href="https://www.etenders.gov.mt'+data[i].Link+'">Link</a></td>';
-        newHtml += '<td class="uniqueid">'+data[i].UniqueId+'</td>';
-        newHtml+= '<td class="authority">' +data[i].Authority+'</td>';
-        newHtml += '<td class="info">'+data[i].Info+'</td>';
-        newHtml += '<td class="deadline">'+data[i].Deadline+'</td>';
-        newHtml += '<td class="procedure">'+data[i].Procedure+'</td>';
-        newHtml += '</tr>';
-        // console.log(newHtml)
-        // console.log(i)
-    }
-    return `${openingHtml}${newHtml}${closingHtml}`
-
-}
-async function exportHTMLFromMainJson(input){
-    const fs = require("fs");
-    fs.writeFile('exportmain.html', input, function(err){
-        if (err){
-            return console.log(err);
-        }
-    })
-    // console.log(input)
-}  
 async function generateJsonForEachLinkedPage(data){
     const idArray = data.map(function(value, index){
         return value.Link.replace('/epps/cft/prepareViewCfTWS.do?resourceId=', '');
@@ -429,7 +358,125 @@ async function generateHTMLPerLinkedPage(data) {
      
 
 }
-async function populateLinkstoFile(htmlArray, mainPageJsonArray){
+// CONTRACT PAGES
+async function generateContractData(contract) {
+    try{
+        const {data} = await axios.get(contract);
+        const $ = cheerio.load(data);
+        let obj = {};
+        let objArray = [];
+        let isOffset = false;
+
+        $('td.extra').remove();
+        
+
+        let arrayOfContracts = new Array();    
+        for(let i = 0; i < contract.length; i++){
+            $("tbody > tr").each((rowIndex,row) => {  
+                    var tds = $(row).find('td');
+                    tds.each((tdindex, td) =>{
+                    let remainder = getRemainder(tdindex, 5);
+                    const value = $(td).text().trim();
+                    obj = assignContractsToJson(remainder, obj, value);
+                
+                })
+                arrayOfContracts.push(obj);
+                //objArray.push(obj);
+                obj = {};
+            }) 
+            console.log(arrayOfContracts);
+            return arrayOfContracts;
+        } 
+    
+
+        //console.log(objArray);
+        //return objArray;   
+ }
+        catch (error) {
+        throw error;
+        }
+  
+
+}; 
+async function generateForEachContractData(data){
+    let contractId =   data.map(function(value, index){
+        return value.Link.replace('/epps/cft/prepareViewCfTWS.do?resourceId=', '');
+    })
+        let arrayOfContractAtLinks = new Array();
+
+        for(let i = 0; i < contractId.length; i++){
+            const fullLink = 'https://www.etenders.gov.mt/epps/cft/listContractDocuments.do?resourceId=' + contractId[i];
+            const jsonforContracts = await generateContractData(fullLink);
+            JSON.parse(arrayOfContractAtLinks.push(jsonforContracts));
+
+        }
+        return arrayOfContractAtLinks;//.sort (for some reason).
+
+    
+}
+async function generateHTMLPerContractPage(data) {
+const openinglinkedpagesHTML = '<!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Tender Contract Details:</title> <link rel="stylesheet" href="url1.css"> <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script> </head> <body> <table style="width:100%" id="urltable1" class="centre"> <thead> <tr> <th>Addendum ID</th> <th>Title</th> <th>File</th> <th>Description</th> <th>Language</th></tr> </thead> <tbody> '
+const closingLinkedpagesHTML = '</script> </tbody> </table> </body> </html>';
+let newHtml = "";
+
+let contractHtmlPageArray = new Array(); 
+
+
+    for(let i = 0; i < data.length; i++){
+        for(let j = 0; j < data[i].length; j++){
+             
+        
+            newHtml += '<tr>';
+            newHtml += '<td>'+ data[i][j].AddendumId + '</td>';
+            newHtml += '<td>'+data[i][j].Title+'</td>';
+            newHtml += '<td>'+data[i][j].File+'</td>';
+            newHtml+= '<td>' +data[i][j].Description+'</td>';
+            newHtml += '<td>'+data[i][j].Language+'</td>';
+            newHtml += '</tr>';
+            //console.log(newHtml)
+            //console.log(i)
+        }
+    
+    
+        // Array is pushed after the for loop ends not during as this will generate an html per row.
+        let thisPage =  `${openinglinkedpagesHTML}${newHtml}${closingLinkedpagesHTML}`;
+        contractHtmlPageArray.push(thisPage);
+    }
+    
+    console.log(contractHtmlPageArray)
+    return contractHtmlPageArray;
+     
+
+}
+function assignContractsToJson(cellNumber,obj,value){
+    switch(cellNumber){
+        case 0:{
+            obj.AddendumId = value.replace(/\s+/g, ' ').trim();;
+        }
+        case 1:{
+            obj.Title = value.replace(/\s+/g, ' ').trim();;
+        }
+        case 2:{
+            obj.File = value.replace(/\s+/g, ' ').trim();;
+        }
+        case 3:{
+            obj.Description = value.replace(/\s+/g, ' ').trim();;
+        }
+        case 4:{
+            obj.Language = value.replace(/\s+/g, ' ').trim();;
+        }
+    }
+    console.log(obj);
+    return obj
+    
+}
+function getRemainder(value, divisor){          
+    return value % divisor;
+}
+
+// POPULATE FILES
+
+async function populateLinkedpagetoFile(htmlArray, mainPageJsonArray){
     let idArray = new Array();
     for(let i = 0; i < htmlArray.length; i++){
         let pageID = mainPageJsonArray[i].Link.replace('/epps/cft/prepareViewCfTWS.do?resourceId=', '')
@@ -447,18 +494,44 @@ async function populateLinkstoFile(htmlArray, mainPageJsonArray){
         //use variable as filename (ie. before .html)       
     }  
 }
+async function populateContractstoFile(mainPageJsonArray,contractHtmlPageArray){
+   
+    let idArray = new Array();
+    for(let i = 0; i < contractHtmlPageArray.length; i++){
+        let ContractpageID = mainPageJsonArray[i].Link.replace('/epps/cft/prepareViewCfTWS.do?resourceId=', '')
+        idArray.push(ContractpageID);
+    
+        const fs = require("fs");
+        fs.writeFile( ContractpageID + "z.html", contractHtmlPageArray[i], function(err){
+            if (err) {
+                return console.log(err);
+            }
+        })
+        //console.log(mainPageJsonArray[i].Link)   
+        //extract title from Link above
+        //store title in variable
+        //use variable as filename (ie. before .html)       
+    }  
+} 
 async function init(){ 
-
+    //Data generation  
     const mainPageJsonArray = await tScrape();
-     const linkedPageArrayOfJsons =  await generateJsonForEachLinkedPage(mainPageJsonArray);
-     //const contractPageArrayOfJsons = await generateJsonForEachContractPage(mainPageJsonArray);
-     const linkedPageHtmlArray = await generateHTMLPerLinkedPage(linkedPageArrayOfJsons) 
-     const mainPageHtml = await generateHTMLFromMainJson(mainPageJsonArray,linkedPageArrayOfJsons);
-     const eachContractedPage = await generateForEachContractData(mainPageJsonArray);
-     const exportMainPageHtml = await exportHTMLFromMainJson(mainPageHtml);
-     const exportLinkedPage = await populateLinkstoFile(linkedPageHtmlArray, mainPageJsonArray);
+    const eachContractedPage = await generateForEachContractData(mainPageJsonArray);
+    const linkedPageArrayOfJsons =  await generateJsonForEachLinkedPage(mainPageJsonArray);
+    
+    //Html For The Pages
+    const mainPageHtml = await generateHTMLFromMainJson(mainPageJsonArray,linkedPageArrayOfJsons);
+    const contractHtmlPageArray = await generateHTMLPerContractPage(eachContractedPage);
+    const linkedPageHtmlArray = await generateHTMLPerLinkedPage(linkedPageArrayOfJsons)  
+    
+    //export
+    const exportContracts = await populateContractstoFile(mainPageJsonArray,contractHtmlPageArray);
+    const exportMainPageHtml = await exportHTMLFromMainJson(mainPageHtml);
+    const exportLinkedPage = await populateLinkedpagetoFile(linkedPageHtmlArray, mainPageJsonArray);
+    
     
 };
+
 init();
 
 
