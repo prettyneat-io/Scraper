@@ -360,47 +360,16 @@ async function generateHTMLPerLinkedPage(data) {
 }
 // CONTRACT PAGES:
 async function downloadCDPerPage(data) {
-    //for loop parent array
-    // var contractIds = data.map(function(value, index){ //data[i]
-    //     if(value.OnClick){
-    //         return value.OnClick.replace('downloadDocForAnonymous', '').replace(')', '');
-    //data[i][j]
-    //     }
-    // })
-
-    let firstCounter = 0;
-    
-    for(let i = 0; i < data[i].length; i++){
-        for(let j = 0; j < data[j].length; j++){
-           firstCounter+=1;
-        }
-    }
-
-    let secondCounter = 0;
-
+   
     for(let i = 0; i < data.length; i++){
         for(let j = 0; j < data[i].length; j++){
-            secondCounter+=1;
-            // if(data[i][j].OnClick){
-            //     data[i][j].OnClick.replace('downloadDocForAnonymous(','https://www.etenders.gov.mt/epps/cft/downloadContractDocument.do?documentId=').replace(')','');
-            // }
+            if(data[i][j].OnClick){
+                data[i][j].OnClick = data[i][j].OnClick.replace('downloadDocForAnonymous(','https://www.etenders.gov.mt/epps/cft/downloadContractDocument.do?documentId=').replace(')','');
+            }
         }
     }
-
-    
-    
-    //let arrayOfContractFiles = new Array();
-
-    /*for(let i = 0; i < data[i][j].length; i++){
-        let fullink = `https://www.etenders.gov.mt/epps/cft/downloadContractDocument.do?documentId=`+ [i];
-        const jsonforContracts = await generateContractData(fullink);
-       // arrayOfContractFiles.push(jsonforContracts);
-        //const jsonforContracts = await generateContractData(fullLink);                
-    
-    }*/
-    //console.log(arrayOfContractFiles)
-    //return arrayOfContractFiles;*/    
-    
+    console.log(data)
+    return data;
 }
 async function generateContractData(contract) {
     try{
@@ -440,7 +409,6 @@ async function generateContractData(contract) {
                 //objArray.push(obj);
                 obj = {};
             }) 
-            console.log(arrayOfContracts);
             return arrayOfContracts;
         } 
     
@@ -482,13 +450,14 @@ let contractHtmlPageArray = new Array();
     for(let i = 0; i < data.length; i++){
         for(let j = 0; j < data[i].length; j++){
              
-        
+                   
             newHtml += '<tr>';
             newHtml += '<td>'+ data[i][j].AddendumId + '</td>';
             newHtml += '<td>'+data[i][j].Title+'</td>';
-            newHtml += '<td>'+data[i][j].File+'</td>';
+            newHtml += '<td><a target="_blank" href="'+data[i][j].OnClick+'">'+data[i][j].File+'</a></td>';;
             newHtml+= '<td>' +data[i][j].Description+'</td>';
             newHtml += '<td>'+data[i][j].Language+'</td>';
+            
             newHtml += '</tr>';
             //console.log(newHtml)
             //console.log(i)
@@ -531,6 +500,7 @@ function assignContractsToJson(cellNumber,obj,value, onclick){
     return obj
     
 }
+
 function getRemainder(value, divisor){          
     return value % divisor;
 }
@@ -586,7 +556,7 @@ async function init(){
     const contractFileDownload = await downloadCDPerPage(eachContractedPage);
     //Html For The Pages:
     const mainPageHtml = await generateHTMLFromMainJson(mainPageJsonArray,linkedPageArrayOfJsons);
-    const contractHtmlPageArray = await generateHTMLPerContractPage(eachContractedPage);
+    const contractHtmlPageArray = await generateHTMLPerContractPage(contractFileDownload);
     const linkedPageHtmlArray = await generateHTMLPerLinkedPage(linkedPageArrayOfJsons)  
     
     
