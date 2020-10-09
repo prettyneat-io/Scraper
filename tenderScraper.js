@@ -7,7 +7,7 @@ const { fstat } = require("fs");
 const { isNumber } = require("util");
 
 
-// MAIN PAGE
+// MAIN PAGE:
 async function tScrape() {
 
      let outputArray = [];
@@ -120,7 +120,7 @@ async function exportHTMLFromMainJson(input){
     })
     // console.log(input)
 }  
-// LINKED PAGES
+// LINKED PAGES:
 async function generateJsonData(link) {
     try{
         const {data} = await axios.get(link);
@@ -358,7 +358,50 @@ async function generateHTMLPerLinkedPage(data) {
      
 
 }
-// CONTRACT PAGES
+// CONTRACT PAGES:
+async function downloadCDPerPage(data) {
+    //for loop parent array
+    // var contractIds = data.map(function(value, index){ //data[i]
+    //     if(value.OnClick){
+    //         return value.OnClick.replace('downloadDocForAnonymous', '').replace(')', '');
+    //data[i][j]
+    //     }
+    // })
+
+    let firstCounter = 0;
+    
+    for(let i = 0; i < data[i].length; i++){
+        for(let j = 0; j < data[j].length; j++){
+           firstCounter+=1;
+        }
+    }
+
+    let secondCounter = 0;
+
+    for(let i = 0; i < data.length; i++){
+        for(let j = 0; j < data[i].length; j++){
+            secondCounter+=1;
+            // if(data[i][j].OnClick){
+            //     data[i][j].OnClick.replace('downloadDocForAnonymous(','https://www.etenders.gov.mt/epps/cft/downloadContractDocument.do?documentId=').replace(')','');
+            // }
+        }
+    }
+
+    
+    
+    //let arrayOfContractFiles = new Array();
+
+    /*for(let i = 0; i < data[i][j].length; i++){
+        let fullink = `https://www.etenders.gov.mt/epps/cft/downloadContractDocument.do?documentId=`+ [i];
+        const jsonforContracts = await generateContractData(fullink);
+       // arrayOfContractFiles.push(jsonforContracts);
+        //const jsonforContracts = await generateContractData(fullLink);                
+    
+    }*/
+    //console.log(arrayOfContractFiles)
+    //return arrayOfContractFiles;*/    
+    
+}
 async function generateContractData(contract) {
     try{
         const {data} = await axios.get(contract);
@@ -374,12 +417,25 @@ async function generateContractData(contract) {
         for(let i = 0; i < contract.length; i++){
             $("tbody > tr").each((rowIndex,row) => {  
                     var tds = $(row).find('td');
-                    tds.each((tdindex, td) =>{
-                    let remainder = getRemainder(tdindex, 5);
-                    const value = $(td).text().trim();
-                    obj = assignContractsToJson(remainder, obj, value);
+                    tds.each((tdindex, td) => {
+                        
+                        
+                      
+                        let remainder = getRemainder(tdindex, 5)
+                        const value = $(td).text().trim();
+                        
+                        
+                         const child = $(td).children('a')[0]
+                         const onclick = $(child).attr('onclick');
+                        
+                        if(onclick){
+                            obj = assignContractsToJson(remainder, obj, value, onclick);
+
+                        }else{
+                            obj = assignContractsToJson(remainder, obj, value);
+                        }
+                    }) 
                 
-                })
                 arrayOfContracts.push(obj);
                 //objArray.push(obj);
                 obj = {};
@@ -398,6 +454,7 @@ async function generateContractData(contract) {
   
 
 }; 
+
 async function generateForEachContractData(data){
     let contractId =   data.map(function(value, index){
         return value.Link.replace('/epps/cft/prepareViewCfTWS.do?resourceId=', '');
@@ -448,7 +505,7 @@ let contractHtmlPageArray = new Array();
      
 
 }
-function assignContractsToJson(cellNumber,obj,value){
+function assignContractsToJson(cellNumber,obj,value, onclick){
     switch(cellNumber){
         case 0:{
             obj.AddendumId = value.replace(/\s+/g, ' ').trim();;
@@ -457,7 +514,11 @@ function assignContractsToJson(cellNumber,obj,value){
             obj.Title = value.replace(/\s+/g, ' ').trim();;
         }
         case 2:{
-            obj.File = value.replace(/\s+/g, ' ').trim();;
+            obj.File = value.replace(/\s+/g, ' ').trim();
+            if(onclick){
+                
+                obj.OnClick = onclick;
+            }
         }
         case 3:{
             obj.Description = value.replace(/\s+/g, ' ').trim();;
@@ -473,8 +534,10 @@ function assignContractsToJson(cellNumber,obj,value){
 function getRemainder(value, divisor){          
     return value % divisor;
 }
+// CONTRACT DOWNLOAD:
 
-// POPULATE FILES
+
+// POPULATE FILES:
 
 async function populateLinkedpagetoFile(htmlArray, mainPageJsonArray){
     let idArray = new Array();
@@ -513,18 +576,23 @@ async function populateContractstoFile(mainPageJsonArray,contractHtmlPageArray){
         //use variable as filename (ie. before .html)       
     }  
 } 
-async function init(){ 
-    //Data generation  
+async function init(){
+
+    //Data generation:  
     const mainPageJsonArray = await tScrape();
     const eachContractedPage = await generateForEachContractData(mainPageJsonArray);
     const linkedPageArrayOfJsons =  await generateJsonForEachLinkedPage(mainPageJsonArray);
-    
-    //Html For The Pages
+    ///Download Contract Files:
+    const contractFileDownload = await downloadCDPerPage(eachContractedPage);
+    //Html For The Pages:
     const mainPageHtml = await generateHTMLFromMainJson(mainPageJsonArray,linkedPageArrayOfJsons);
     const contractHtmlPageArray = await generateHTMLPerContractPage(eachContractedPage);
     const linkedPageHtmlArray = await generateHTMLPerLinkedPage(linkedPageArrayOfJsons)  
     
-    //export
+    
+    
+
+    //export:
     const exportContracts = await populateContractstoFile(mainPageJsonArray,contractHtmlPageArray);
     const exportMainPageHtml = await exportHTMLFromMainJson(mainPageHtml);
     const exportLinkedPage = await populateLinkedpagetoFile(linkedPageHtmlArray, mainPageJsonArray);
